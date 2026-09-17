@@ -59,49 +59,11 @@ def _sort_benchmark(df: pd.DataFrame) -> pd.DataFrame:
     out = out.sort_values(['Sensitivity', 'FAR_per_Hour', 'Mean_Delay_s'], ascending=[False, True, True]).reset_index(drop=True)
     return out
 
-def resolve_final_rf_context() -> Tuple[ExperimentConfig, Dict[str, Dict[str, Any]], int, str]:
-    if 'TUNED_RF_CFG' in globals():
-        cfg = copy.deepcopy(TUNED_RF_CFG)
-        caches_local = TUNED_CACHES if 'TUNED_CACHES' in globals() else load_all_caches(cfg)
-        cfg_source = 'TUNED_RF_CFG'
-    else:
-        cfg = copy.deepcopy(CFG)
-        caches_local = caches if 'caches' in globals() else load_all_caches(cfg)
-        cfg_source = 'CFG'
-    cfg.eval.patient_ids = tuple((f'chb{i:02d}' for i in range(1, 11)))
-    cfg.eval.fixed_threshold_mode = False
-    final_top_k_local = int(cfg.eval.top_k_features)
-    return (cfg, caches_local, final_top_k_local, cfg_source)
-
 def annotate_bars(ax, fmt='{:.3f}', offset=4):
     for patch in ax.patches:
         h = patch.get_height()
         if np.isfinite(h):
             ax.annotate(fmt.format(h), (patch.get_x() + patch.get_width() / 2, h), ha='center', va='bottom', fontsize=10, xytext=(0, offset), textcoords='offset points')
-
-def _md(text: str):
-    display(Markdown(text))
-
-def _safe_copy_df(name: str) -> pd.DataFrame:
-    obj = globals().get(name, None)
-    if isinstance(obj, pd.DataFrame):
-        return obj.copy()
-    return pd.DataFrame()
-
-def _show_df(title: str, df: pd.DataFrame, note: str='', round_cols: dict=None):
-    _md(f'## {title}')
-    if note:
-        _md(note)
-    if df is None or df.empty:
-        print('[Empty table / variable not found]')
-        return
-    out = df.copy()
-    if round_cols:
-        for col, digits in round_cols.items():
-            if col in out.columns:
-                out[col] = pd.to_numeric(out[col], errors='coerce').round(digits)
-    display(out)
-    print(f'shape = {out.shape}')
 
 def _reorder_cols(df: pd.DataFrame, preferred_cols: list) -> pd.DataFrame:
     if df is None or df.empty:

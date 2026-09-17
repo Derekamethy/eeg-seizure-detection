@@ -1,4 +1,4 @@
-﻿Patient,Model,TopK,Hours,True_Seizures,Sensitivity,FAR_per_Hour,Mean_Delay_s,Median_Delay_s,Median_Threshold,FP_events,Variant,UsesProxyFeatures,ProxyRecipe,ProxyFeatureCount,ThresholdPolicy,MinDurationEpochs
+Patient,Model,TopK,Hours,True_Seizures,Sensitivity,FAR_per_Hour,Mean_Delay_s,Median_Delay_s,Median_Threshold,FP_events,Variant,UsesProxyFeatures,ProxyRecipe,ProxyFeatureCount,ThresholdPolicy,MinDurationEpochs
 chb01,random_forest,30,40.55166666666667,7.0,1.0,0.6658172701491923,4.285714285714286,2.0,0.499,23,baseline_rf_top30,False,baseline,0,baseline_far_first,3
 chb02,random_forest,30,35.26611111111111,3.0,1.0,0.25520250791600374,3.3333333333333335,4.0,0.308,8,baseline_rf_top30,False,baseline,0,baseline_far_first,3
 chb03,random_forest,30,38.001666666666665,7.0,1.0,0.526292706460243,4.0,2.0,0.672,19,baseline_rf_top30,False,baseline,0,baseline_far_first,3

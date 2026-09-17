@@ -7,23 +7,19 @@ name = "eeg-seizure-detection"
 version = "0.1.0"
 description = "Patient-specific EEG seizure detection and clinical error analysis portfolio project"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{name = "Yangdeyi Yang"}]
 dependencies = [
   "numpy",
   "pandas",
   "scipy",
   "scikit-learn",
-  "matplotlib",
-  "seaborn",
   "mne",
   "joblib",
-  "xgboost",
-  "emlearn",
 ]
 
 [project.optional-dependencies]
-notebook = ["jupyter"]
+benchmark = ["xgboost"]
 
 [project.urls]
 "Engineering showcase" = "https://derekamethy.github.io/EEG-seizure-detection-website/"

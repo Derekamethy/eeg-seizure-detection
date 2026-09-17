@@ -25,8 +25,9 @@ def parse_summary_to_dict(summary_path: Path) -> Dict[str, List[Tuple[int, int]]
     seizure_dict: Dict[str, List[Tuple[int, int]]] = {}
     current_file: Optional[str] = None
     current_start: Optional[int] = None
+    expected_counts = {}
     if not summary_path.exists():
-        return seizure_dict
+        raise FileNotFoundError(f'Seizure summary not found: {summary_path}')
     file_pattern = re.compile('File Name:\\s*([^\\s]+\\.edf)', flags=re.IGNORECASE)
     start_pattern = re.compile('Seizure(?:\\s+\\d+)?\\s+Start Time:\\s*(\\d+)\\s*(?:seconds?)?', flags=re.IGNORECASE)
     end_pattern = re.compile('Seizure(?:\\s+\\d+)?\\s+End Time:\\s*(\\d+)\\s*(?:seconds?)?', flags=re.IGNORECASE)
@@ -35,20 +36,37 @@ def parse_summary_to_dict(summary_path: Path) -> Dict[str, List[Tuple[int, int]]
             line = raw_line.strip()
             file_match = file_pattern.search(line)
             if file_match:
+                if current_start is not None:
+                    raise ValueError('Unpaired seizure start before next recording.')
                 current_file = Path(file_match.group(1)).name
-                seizure_dict.setdefault(current_file, [])
+                if current_file in seizure_dict:
+                    raise ValueError(f'Duplicate summary entry: {current_file}')
+                seizure_dict[current_file] = []
                 current_start = None
                 continue
+            count_match = re.search(r'Number of Seizures in File:\s*(\d+)', line, re.IGNORECASE)
+            if count_match and current_file is not None:
+                expected_counts[current_file] = int(count_match.group(1))
             start_match = start_pattern.search(line)
             if start_match:
+                if current_start is not None:
+                    raise ValueError('Consecutive seizure starts without an end.')
                 current_start = int(start_match.group(1))
                 continue
             end_match = end_pattern.search(line)
-            if end_match and current_file is not None and (current_start is not None):
+            if end_match:
+                if current_file is None or current_start is None:
+                    raise ValueError('Seizure end without a corresponding start.')
                 current_end = int(end_match.group(1))
-                if current_end > current_start:
-                    seizure_dict[current_file].append((current_start, current_end))
+                if current_end <= current_start:
+                    raise ValueError('Seizure end must follow its start.')
+                seizure_dict[current_file].append((current_start, current_end))
                 current_start = None
+    if current_start is not None:
+        raise ValueError('Unpaired seizure start in summary.')
+    for name, intervals in seizure_dict.items():
+        if name not in expected_counts or expected_counts[name] != len(intervals):
+            raise ValueError(f'Seizure count missing or inconsistent for {name}.')
     return seizure_dict
 
 def build_patient_cache(cfg: ExperimentConfig, patient_id: str, overwrite: bool=False) -> Path:
@@ -61,10 +79,19 @@ def build_patient_cache(cfg: ExperimentConfig, patient_id: str, overwrite: bool=
         return cache_path
     summary_path = patient_dir / f'{patient_id}-summary.txt'
     seizure_dict = parse_summary_to_dict(summary_path)
+    edf_paths = sorted(patient_dir.glob('*.edf'))
+    if not edf_paths:
+        raise ValueError(f'No EDF recordings in {patient_dir}')
+    missing = [p.name for p in edf_paths if p.name not in seizure_dict]
+    if missing:
+        raise ValueError(f'Recordings missing from seizure summary: {missing}')
+    absent_edfs = sorted(set(seizure_dict) - {p.name for p in edf_paths})
+    if absent_edfs:
+        raise FileNotFoundError(f'Annotated recordings missing from patient directory: {absent_edfs}')
     file_payload = {}
     processed_files = 0
     skipped_files = 0
-    for edf_path in sorted(patient_dir.glob('*.edf')):
+    for edf_path in edf_paths:
         raw = None
         try:
             raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
@@ -73,11 +100,12 @@ def build_patient_cache(cfg: ExperimentConfig, patient_id: str, overwrite: bool=
             if cfg.feature.scale_to_uV:
                 aligned_data = aligned_data * 1000000.0
             fs = int(raw.info['sfreq'])
+            if fs != raw.info['sfreq']:
+                raise ValueError('Sampling frequency must be an integer number of Hz.')
             data_bp = bandpass_filter_multich(aligned_data, fs=fs, lowcut=cfg.feature.bandpass_low_hz, highcut=cfg.feature.bandpass_high_hz, method=cfg.feature.bandpass_method, butter_order=cfg.feature.butter_order)
             X_base, kept_epoch_indices = extract_base_features_for_file(data_bp, fs, cfg)
             if X_base.size == 0:
-                skipped_files += 1
-                continue
+                raise ValueError('Recording contains no complete epochs.')
             seizure_intervals = seizure_dict.get(edf_path.name, [])
             y_base = build_epoch_labels(n_epochs=len(kept_epoch_indices), epoch_len_s=cfg.feature.epoch_len_s, seizure_intervals=seizure_intervals)
             X_stacked, y_stacked = temporal_stack_features(X_base=X_base, y=y_base, history_epochs=cfg.feature.history_epochs)
@@ -85,7 +113,7 @@ def build_patient_cache(cfg: ExperimentConfig, patient_id: str, overwrite: bool=
             processed_files += 1
         except Exception as exc:
             skipped_files += 1
-            print(f'[warning] {patient_id} / {edf_path.name} skipped: {exc}')
+            raise RuntimeError(f'{patient_id}/{edf_path.name}: {exc}') from exc
         finally:
             if raw is not None:
                 raw.close()
@@ -128,8 +156,9 @@ def load_all_caches(cfg: ExperimentConfig) -> Dict[str, Dict[str, Any]]:
     caches = {}
     for patient_id in cfg.eval.patient_ids:
         cache_path = get_patient_cache_path(cfg, patient_id)
-        if cache_path.exists():
-            caches[patient_id] = load_patient_cache(cfg, patient_id)
+        if not cache_path.exists():
+            raise FileNotFoundError(f'Missing cache for {patient_id}; run with --rebuild-cache.')
+        caches[patient_id] = load_patient_cache(cfg, patient_id)
     return caches
 
 def summarize_caches(caches: Dict[str, Dict[str, Any]]) -> pd.DataFrame:

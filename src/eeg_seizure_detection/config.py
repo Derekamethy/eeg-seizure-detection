@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from pathlib import Path
 from typing import Sequence
 
@@ -69,7 +70,7 @@ class ExportConfig:
 
 @dataclass
 class ExperimentConfig:
-    data_root: str = 'D:\\EEG_Data\\chb-mit-scalp-eeg-database-1.0.0'
+    data_root: str = 'data/chb-mit'
     cache_subdir: str = 'feature_cache_refactored'
     feature: FeatureConfig = field(default_factory=FeatureConfig)
     eval: EvalConfig = field(default_factory=EvalConfig)
@@ -93,7 +94,7 @@ class ExperimentConfig:
 
 CFG = ExperimentConfig()
 
-CACHE_SCHEMA_VERSION = 'v2_summary_parser_fix'
+CACHE_SCHEMA_VERSION = 'validated_annotations'
 
 
 def make_final_rf_config(data_root: str | Path, patient_ids: Sequence[str] | None = None) -> ExperimentConfig:
@@ -111,4 +112,31 @@ def make_final_rf_config(data_root: str | Path, patient_ids: Sequence[str] | Non
     cfg.eval.fixed_threshold_mode = False
     if patient_ids is not None:
         cfg.eval.patient_ids = tuple(patient_ids)
+    return cfg
+
+
+def load_config(path: str | Path, data_root: str | Path, patient_ids: Sequence[str] | None = None) -> ExperimentConfig:
+    """Load the executable JSON configuration; reject unknown options."""
+    import json
+    with open(path, encoding="utf-8") as stream:
+        values = json.load(stream)
+    unknown = set(values) - {"feature", "eval", "export"}
+    if unknown:
+        raise ValueError(f"Unknown configuration sections: {sorted(unknown)}")
+    cfg = ExperimentConfig(data_root=str(data_root),
+                           feature=FeatureConfig(**values.get("feature", {})),
+                           eval=EvalConfig(**values.get("eval", {})),
+                           export=ExportConfig(**values.get("export", {})))
+    if patient_ids is not None:
+        cfg.eval.patient_ids = tuple(patient_ids)
+    if not cfg.eval.patient_ids or len(set(cfg.eval.patient_ids)) != len(cfg.eval.patient_ids):
+        raise ValueError("Select at least one patient, without duplicates.")
+    if any(not re.fullmatch(r"chb\d{2}", pid) for pid in cfg.eval.patient_ids):
+        raise ValueError("Patient IDs must have the form chb01.")
+    if cfg.feature.epoch_len_s <= 0 or cfg.feature.history_epochs < 0:
+        raise ValueError("Epoch length must be positive and history nonnegative.")
+    if cfg.eval.top_k_features <= 0 or cfg.eval.min_duration_epochs <= 0:
+        raise ValueError("Top-K and minimum duration must be positive.")
+    if not cfg.eval.threshold_grid or any(not 0 <= t <= 1 for t in cfg.eval.threshold_grid):
+        raise ValueError("Threshold grid must contain probabilities in [0, 1].")
     return cfg

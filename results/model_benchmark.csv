@@ -1,4 +1,4 @@
-model,macro_sensitivity,median_subject_far_per_hour,mean_detected_event_delay_s,source
+model,macro_sensitivity,median_subject_far_per_hour,macro_mean_detected_event_delay_s,source
 SVM-RBF,0.955,1.1788,8.35,final report Table 5
 Random Forest,0.955,0.2767,7.36,final report Table 5
 XGBoost,0.930,0.3419,4.53,final report Table 5

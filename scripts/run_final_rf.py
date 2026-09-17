@@ -6,7 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from eeg_seizure_detection.config import make_final_rf_config
+from eeg_seizure_detection.config import load_config
 from eeg_seizure_detection.data import build_all_caches, load_all_caches
 from eeg_seizure_detection.evaluation import evaluate_many_patients
 
@@ -14,7 +14,8 @@ from eeg_seizure_detection.evaluation import evaluate_many_patients
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-root", required=True, help="CHB-MIT dataset root")
-    parser.add_argument("--patients", nargs="*", default=None)
+    parser.add_argument("--config", type=Path, default=ROOT / "configs" / "final_rf.json")
+    parser.add_argument("--patients", nargs="+", default=None)
     parser.add_argument("--rebuild-cache", action="store_true")
     parser.add_argument(
         "--output",
@@ -25,9 +26,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    cfg = make_final_rf_config(args.data_root, args.patients)
+    cfg = load_config(args.config, args.data_root, args.patients)
     if args.rebuild_cache:
-        build_all_caches(cfg, overwrite=False)
+        build_all_caches(cfg, overwrite=True)
     caches = load_all_caches(cfg)
     if not caches:
         raise RuntimeError(

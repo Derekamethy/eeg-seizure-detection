@@ -23,7 +23,6 @@ Thumbs.db
 
 # Large generated artifacts
 *.log
-clinical_error_analysis_exports*/
 # Packaging / reproduction outputs
 *.egg-info/
 outputs/

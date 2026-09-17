@@ -1,3 +1,3 @@
-﻿patient_id,file_name,true_event_id,true_start_epoch,true_end_epoch,true_onset_time_s,true_offset_time_s,duration_s,matched_pred_event_ids,event_role,delay_s
+patient_id,file_name,true_event_id,true_start_epoch,true_end_epoch,true_onset_time_s,true_offset_time_s,duration_s,matched_pred_event_ids,event_role,delay_s
 chb04,chb04_28.edf,chb04|chb04_28.edf|T02,1891,1949,3782.0,3898.0,116.0,['chb04|chb04_28.edf|P03'],TP,104.0
 chb04,chb04_28.edf,chb04|chb04_28.edf|T01,839,891,1678.0,1782.0,104.0,"['chb04|chb04_28.edf|P01', 'chb04|chb04_28.edf|P02']",TP,20.0

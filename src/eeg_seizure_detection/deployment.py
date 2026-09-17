@@ -10,6 +10,8 @@ import numpy as np
 
 def benchmark_single_epoch_latency(model, X_stream: np.ndarray, n_steps: int=1000) -> Dict[str, float]:
     n_steps = min(n_steps, len(X_stream))
+    if n_steps <= 0:
+        raise ValueError('Latency profiling requires at least one sample.')
     timings = []
     for i in range(n_steps):
         sample = X_stream[i:i + 1]

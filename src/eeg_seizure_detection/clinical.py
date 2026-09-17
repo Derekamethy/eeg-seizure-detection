@@ -22,8 +22,7 @@ def build_clinical_case_dataframe(patient_id: str, patient_payload: Dict[str, An
     if len(seizure_positions) == 0:
         raise ValueError(f'No positive epochs in {patient_id}/{file_name}.')
     onset_epoch = int(seizure_positions[0])
-    _cfg_case = deploy_cfg if 'deploy_cfg' in globals() else CFG
-    epoch_len_s = _cfg_case.feature.epoch_len_s
+    epoch_len_s = patient_payload['meta']['epoch_len_s']
     onset_time_s = onset_epoch * epoch_len_s
     pre_epochs = max(1, int(np.ceil(pre_seconds / epoch_len_s)))
     post_epochs = max(1, int(np.ceil(post_seconds / epoch_len_s)))

@@ -1,0 +1,5 @@
+CaseType,Patient,File,ImagePath,Delay_s,PeakProb,Duration_s
+chb04_delay,chb04,chb04_28.edf,chb04_delay_case_01.png,104.0,,
+chb04_delay,chb04,chb04_28.edf,chb04_delay_case_02.png,20.0,,
+chb08_fp,chb08,chb08_15.edf,chb08_fp_case_01.png,,0.8513685356692,26.0
+chb08_fp,chb08,chb08_11.edf,chb08_fp_case_02.png,,0.7429548410290968,12.0

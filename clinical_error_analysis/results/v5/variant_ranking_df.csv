@@ -1,4 +1,0 @@
-﻿Variant,passes_focus_sensitivity_guard,focus_fp_event_improvement,chb08_far_improvement,chb04_delay_improvement,focus_macro_sensitivity_delta,focus_macro_far_delta,focus_macro_delay_delta,UsesProxyFeatures,ProxyRecipe,ProxyFeatureCount,ThresholdPolicy,MinDurationEpochs
-proxy_hybrid_plus_count_rf,True,22,0.4998472688900614,-17.5,0.0,-0.2926710120578271,8.549999999999997,True,hybrid_plus_amp_count,4,far_first,3
-proxy_hybrid_plus_count_delayfirst_rf,True,-196,-2.5992057982283194,3.0,0.0,1.7796888323040272,-3.3000000000000007,True,hybrid_plus_amp_count,4,delay_first,3
-proxy_hybrid_plus_count_delayfirst_d2_rf,True,-232,-3.298991974674405,3.0,0.0,2.2019236364871873,-3.3000000000000007,True,hybrid_plus_amp_count,4,delay_first,2

@@ -1,0 +1,7 @@
+variant,macro_sensitivity,median_subject_far_per_hour,macro_mean_delay_s,decision,source
+baseline_rf_top30,0.9778,0.3907,9.96,comparison baseline,final report Table 12
+proxy_augmented_rf,0.9778,0.2575,9.42,accepted within refinement study,final report Table 12
+artifact_aware_rf,0.7873,0.1854,8.45,rejected sensitivity loss,final report Table 12
+proxy_hybrid_rf,0.9528,0.2551,9.63,rejected missed chb04 event,final report Table 12
+proxy_hybrid_plus_count_rf,0.9667,0.2810,11.07,rejected later chb04 alarm,final report Table 12
+proxy_hybrid_plus_count_delayfirst_d2_rf,0.9778,1.2423,6.03,rejected false alarm increase,final report Table 12

@@ -1,194 +1,112 @@
 # EEG Seizure Detection from Multichannel Scalp EEG
 
-Patient-specific seizure-event detection on the public CHB-MIT scalp EEG dataset, combining signal processing, classical machine learning, leakage-aware validation, event-level error analysis, and deployment-oriented profiling.
+Patient-specific seizure detection on **CHB-MIT scalp EEG**, using signal processing, engineered spectral and synchrony features, and a **Random Forest**. The reported study detected **53 of 55 seizures over 580.57 hours**, evaluated using event sensitivity, false alarms per hour, and detection delay.
 
 [![Release QA](https://github.com/Derekamethy/eeg-seizure-detection/actions/workflows/release-qa.yml/badge.svg)](https://github.com/Derekamethy/eeg-seizure-detection/actions/workflows/release-qa.yml)
 
-**UCC EE6019 Research Project · Yangdeyi Yang**
+[Source code](src/eeg_seizure_detection/) · [Results](results/) · [Error analysis](results/error_analysis/) · [Academic report](docs/EE6019_Final_Report_PUBLIC_REDACTED.pdf)
 
-[Engineering showcase](https://derekamethy.github.io/EEG-seizure-detection-website/) · [Privacy-redacted final report](docs/EE6019_Final_Report_PUBLIC_REDACTED.pdf) · [RF reference notebook](notebooks/reference/01_final_rf_reference.ipynb) · [Error-analysis lineage](clinical_error_analysis/)
+## Overview
 
-[![EEG seizure detection engineering showcase](assets/hero_showcase.png)](https://derekamethy.github.io/EEG-seizure-detection-website/)
+The study uses ten subjects (`chb01`–`chb10`). Each subject has a separate model, evaluated by holding out one seizure-containing recording and a disjoint subset of background recordings per outer fold. Inner training data determine feature selection; inner validation data determine the alarm threshold. Outer training then refits the classifier before held-out scoring.
 
-> Academic retrospective research prototype. It is not a medical device, prospective clinical study, or unseen-patient generalisation system.
+This is retrospective, within-subject research. It does not establish performance on unseen patients or clinical readiness.
 
-## At a glance
-
-| Study scope | Result |
-| --- | ---: |
-| Patients | 10 (`chb01`-`chb10`) |
-| Retrospective EEG | 580.57 h |
-| Annotated seizure events | 55 |
-| Detected events | 53 / 55 |
-| Macro event sensitivity | 0.98 |
-| Median subject FAR | 0.2455 events/h |
-| Mean delay among detected events | 10.64 s |
-
-**Core strengths:** EEG/DSP · feature engineering · classical ML · leakage-aware validation · event-level metrics · error analysis · model-size/latency profiling
-
-## Why this problem matters
-
-A useful seizure detector cannot be judged by epoch accuracy alone. In long EEG recordings, a model can look accurate while still producing too many false alarms, detecting seizures too late, or overfitting to patient-specific patterns.
-
-This project therefore treats seizure detection as a **signal-processing and event-detection problem**, not only a binary-classification problem. The design target is a practical balance between:
-
-- detecting as many seizure events as possible;
-- controlling false alarms over many hours of non-seizure EEG;
-- keeping detection delay interpretable;
-- preventing leakage between feature selection, threshold tuning, and held-out evaluation;
-- understanding whether the final model is small and fast enough to motivate embedded follow-up work.
-
-## My contribution
-
-I designed and implemented the end-to-end research workflow rather than only training a classifier. The main contributions are:
-
-1. **Built the EEG preprocessing path** from EDF ingestion and annotation parsing through 22-channel bipolar alignment, reversed-polarity handling, filtering, and 2 s epoch labelling.
-2. **Designed a compact engineered representation** with 440 spectral-band features plus three synchrony features, then added three previous epochs of temporal context to form 1,772 candidate inputs.
-3. **Implemented leakage-aware model selection**, including fold-local feature ranking, patient-specific validation thresholds, and held-out event evaluation.
-4. **Compared classical model families** and selected Random Forest for the reported system before tuning the final Top-30 / 500-tree configuration.
-5. **Evaluated event-level detector behaviour** using seizure sensitivity, false alarms per hour, and detection delay rather than relying on sample-level accuracy.
-6. **Performed the reported v1-v5 error-analysis loop**, diagnosing delayed detections and false-positive-heavy cases, testing targeted changes, and rejecting changes that improved focus cases but failed the cohort-level guard.
-7. **Profiled deployment feasibility**, including model size, Python inference latency, compact-forest trade-offs, and C-export feasibility without claiming target-hardware performance.
-
-## System architecture
-
-The pipeline is grouped into five stages so the full system is readable at normal GitHub zoom without an interactive diagram.
-
-| Stage | Processing path | Output / purpose |
-| --- | --- | --- |
-| **1 · Data & channels** | CHB-MIT EDF + annotations → 22-channel bipolar alignment | Standardised multichannel EEG with consistent channel order and polarity |
-| **2 · Preprocessing** | 0.5–50 Hz Butterworth filtering → non-overlapping 2 s epochs | Labelled EEG windows for feature extraction |
-| **3 · Feature engineering** | 443 spectral + synchrony features → 4-frame temporal stack (1,772 candidates) → fold-local Top-30 selection | Compact, leakage-aware representation for each outer evaluation fold |
-| **4 · Model & decision logic** | Patient-specific 500-tree Random Forest → probability smoothing → validation-selected threshold → duration rule | Sustained event decisions rather than isolated positive windows |
-| **5 · Evaluation & refinement** | Event sensitivity / FAR / delay → v1-v5 error analysis → cohort-level guard | Evidence-driven iteration with rejected regressions kept visible |
-
-The key separation is deliberate: **feature selection and threshold tuning happen inside training/validation data, while the held-out outer evaluation remains untouched until scoring.**
-
-## Engineering decisions
-
-| Decision | Why it was used | Trade-off / boundary |
-| --- | --- | --- |
-| 2 s non-overlapping epochs | Keeps temporal units simple and supports event-level post-processing | Coarser timing than shorter windows |
-| Spectral + synchrony features | Provides interpretable EEG structure without a large end-to-end network | Requires handcrafted feature computation |
-| Three previous epochs of context | Adds short-term temporal information to a classical model | Expands 443 base features to 1,772 candidates |
-| Fold-local Top-30 selection | Reduces dimensionality while keeping selection inside the training fold | Top features can vary by patient/fold |
-| Random Forest | Strong sensitivity/FAR balance, interpretable feature importance, export/profiling path | Larger than a tiny embedded classifier |
-| Validation-selected threshold | Adapts operating point per patient without tuning on the held-out test fold | Remains patient-specific |
-| Event-level metrics | Reflects seizure misses, false alarms and delay directly | Not directly comparable with sample-level accuracy |
-| Zero-phase filtering / centred smoothing | Appropriate for the retrospective study and clean offline analysis | Non-causal; must be replaced and revalidated for streaming use |
-
-## Results and evidence map
-
-Several result tables exist because they answer **different questions**. They should not be mixed as if they came from one identical evaluation snapshot.
-
-| Evidence | Purpose | Configuration / scope | Key result |
-| --- | --- | --- | --- |
-| Model-family benchmark | Choose a classical model family | Preliminary SVM-RBF / RF / XGBoost comparison | RF: 0.955 macro sensitivity, 0.2767 median FAR/h, 7.36 s delay |
-| Final reported system | Headline project result | Top-30, 500-tree RF; patient-specific within-subject evaluation | **0.98 macro sensitivity, 0.2455 median FAR/h, 10.64 s mean delay; 53/55 events** |
-| Feature-reduction study | Test whether a smaller representation preserves performance | Full RF vs Top-30 RF | Top-30 detected 53/55 vs 52/55 with five fewer pooled false alarms, at higher delay |
-| Clinical/error-analysis branch | Diagnose failures and test guarded refinements | Reconciled branch baseline and v1-v5 variants | `proxy_augmented_rf`: sensitivity 0.9778, macro FAR 0.2575/h, delay 9.42 s |
-| Deployment profiling | Measure software/model feasibility | Representative final-style RF and compact variants | ~2.99 MB joblib; ~81 ms mean Python inference; compact branch ~719 KB |
-
-The **headline result is the final reported system**, not the preliminary model-family benchmark and not the later error-analysis branch snapshot.
-
-![Classical model-family benchmark](assets/final_multi_model_comparison.png)
-
-*This figure supports model-family selection. Its RF numbers are not the final Top-30 / 500-tree headline result.*
-
-Machine-readable evidence is available in [`results/headline_metrics.csv`](results/headline_metrics.csv), [`results/model_benchmark.csv`](results/model_benchmark.csv), and [`results/feature_reduction_comparison.csv`](results/feature_reduction_comparison.csv).
-
-## Feature behaviour
-
-The final RF uses 30 fold-selected inputs from the 1,772-candidate temporal representation. The plot below is a representative patient-level interpretation example, not a claim that one fixed feature ranking applies to every patient.
-
-![Representative feature importance for chb01](assets/feature_importance_top20_chb01.png)
-
-## Error analysis and guarded refinement
-
-The v1-v5 analysis is part of the reported EE6019 work, even though it was developed in separate notebooks rather than merged back into the large canonical notebook. Its purpose is to explain **why** the detector fails and to test targeted changes under a cohort-level guard.
-
-| Stage | Question | Decision |
-| --- | --- | --- |
-| v1 | What drives delayed true positives and false-positive-heavy cases? | Established event-level failure modes around `chb04` and `chb08` |
-| v2 | Which component of the first targeted fix is useful? | Proxy augmentation emerged as the useful component |
-| v3 | Can a smaller proxy set retain the benefit? | Smaller variants exposed focus-vs-global trade-offs |
-| v4 | Can one minimal add-back recover the difficult `chb04` miss? | Sensitivity recovered, but delay worsened |
-| v5 | Can earlier timing reduce delay safely? | Earlier alarms increased FAR too much; global threshold lowering was rejected |
-
-The strongest accepted branch result, `proxy_augmented_rf`, preserved macro sensitivity at **0.9778** while reducing branch macro FAR from **0.3907/h to 0.2575/h** and mean delay from **9.96 s to 9.42 s**.
-
-The important engineering point is not only that one variant improved. Several apparently useful changes were **rejected** because they improved a focus patient while worsening cohort-level behaviour. Full lineage and exported evidence are under [`clinical_error_analysis/`](clinical_error_analysis/).
-
-## Deployment-oriented profiling
-
-Deployment work was used as a feasibility check, not as a claim of embedded product readiness.
-
-| Evidence | Measured / observed |
-| --- | ---: |
-| Representative RF inputs | 30 |
-| Trees | 500 |
-| Nodes | 36,706 |
-| Serialized joblib size | ~2.99 MB |
-| Direct C-header estimate | ~3.4 MB |
-| Python mean inference latency | ~80.99 ms |
-| Python median latency | ~70.89 ms |
-| Python p95 latency | ~131.05 ms |
-| Compact forest branch | ~719.2 KB vs ~3,642.3 KB reference C export |
-
-The headline forest is therefore too large for a strict low-memory MCU without further compression or architecture changes. In the compact branch, C-export size fell from about **3,642.3 KB to 719.2 KB**, while sensitivity changed from **0.955 to 0.930**, FAR from **0.2617/h to 0.4234/h**, and delay from **7.63 s to 6.63 s**. The separate 20.67 KB single-subject export is only a representation proof and **must not be interpreted as the validated cohort model**.
-
-## Repository map
+## Pipeline
 
 ```text
-src/eeg_seizure_detection/   Primary engineering implementation, split by responsibility
-extensions/cnn/              Separate 1D-CNN experimental implementation
-notebooks/reference/          English, output-free historical reference notebooks
-clinical_error_analysis/     Reported v1-v5 lineage, reports, evidence, and reference notebooks
-configs/final_rf.json         Machine-readable final RF configuration
-results/                      Canonical result tables with aggregation labels
-assets/                       Model-comparison and feature-importance figures
-data/                         Dataset access / redistribution notes
-docs/                         Privacy-redacted report and provenance audit
-scripts/                      Release QA and reproduction utilities
+CHB-MIT EDF + seizure annotations
+  → align 22 bipolar channels, including reversed-polarity handling
+  → 0.5–50 Hz zero-phase Butterworth filter (order 4)
+  → non-overlapping 2 s epochs; any seizure overlap gives a positive label
+  → 440 FFT energy features + 3 inter-hemispheric correlations
+  → current epoch + 3 previous epochs = 1,772 candidate inputs
+  → inner-training Top-30 selection → patient-specific 500-tree RF (depth 12)
+  → centred five-epoch median smoothing → validation threshold
+  → retain runs of at least 3 epochs → event-level scoring
 ```
 
-The primary implementation now lives in responsibility-specific Python modules under `src/eeg_seizure_detection/`. `legacy_core.py` is retained only as a thin compatibility re-export for older imports; it no longer contains the main implementation.
+Temporal context is zero-padded at recording starts. The RF uses class weighting and training-only background subsampling. It needs no fitted feature scaling; the optional SVM comparator fits its scaler inside the training pipeline. There is no separate preictal class or notch-filter stage.
 
-The 1D-CNN experiment is implemented separately under `extensions/cnn/`. The notebooks under `notebooks/reference/` are preserved only as English, output-free historical references and are not the primary code interface.
+## Key results
 
-## Reproduction
+| Reported final study metric | Value |
+| --- | ---: |
+| Subjects / EEG duration | 10 / 580.57 h |
+| Detected seizure events | 53 / 55 |
+| Mean subject event sensitivity | 0.9800 |
+| Pooled event sensitivity | 0.9636 |
+| Median subject false alarm rate | 0.2455 events/h |
+| Pooled false alarm rate | 178 / 580.57 h = 0.3066 events/h |
+| Mean of subject mean detected-event delays | 10.64 s |
+| Pooled mean detected-event delay | 9.09 s |
 
-Raw CHB-MIT EDF recordings are not redistributed. Obtain the dataset from its authorised source, then run:
+These are the report's measurements, cross-checked against the saved [subject table](results/patient_metrics.csv). Macro and pooled averages answer different questions. The full-feature RF detected 52/55 events with 183 false alarms and a pooled delay of 6.69 s; Top-30 reduced false alarms and added one detection, at higher delay.
+
+**Reproduction boundary:** the maintained evaluator now respects recording boundaries for smoothing, duration rules and event scoring, and applies smoothing consistently during validation and testing. These corrections have synthetic regression tests, but have not been rerun on the raw cohort. The saved study metrics are not measurements of the corrected evaluator.
+
+## Engineering implementation
+
+- EDF annotation parsing, channel alignment, filtering and configuration-keyed feature caches.
+- Spectral/correlation feature extraction and past-epoch context stacking.
+- Training-only feature ranking, seeded file splits and patient-specific RF training.
+- Recording-aware event scoring, cohort summaries and explicit failures for incomplete inputs.
+- Case-level error inspection, model serialization support, model-size and inference profiling.
+- Executable JSON configuration, a command-line runner and synthetic regression tests in CI.
+
+A true event is a contiguous positive-label run. Any alarm overlap detects it; delay is measured from its first positive epoch. False alarms count contiguous alarm fragments outside seizure labels, divided by **all evaluated hours**. A sustained alarm can overlap more than one seizure, and its non-seizure portions can count as false alarms. This is not one-to-one alarm matching.
+
+## Repository structure
+
+```text
+src/eeg_seizure_detection/  Data, preprocessing, features, models, evaluation,
+                           experiments, clinical inspection, deployment and I/O
+configs/final_rf.json       Executable RF and feature configuration
+scripts/                   Experiment runner and release checks
+tests/                    Small synthetic and artifact-consistency tests
+results/                   Reported metrics, subject table and error analysis
+assets/                    Classical-model and feature-importance figures
+docs/                      Privacy-redacted academic report
+data/                      Dataset access and folder layout
+.github/workflows/         Installation, release QA and unit tests
+```
+
+## Reproduce
+
+Use Python 3.11 or later. Obtain CHB-MIT from [PhysioNet](https://physionet.org/content/chbmit/1.0.0/) and follow the [dataset layout](data/README.md).
 
 ```bash
 python -m pip install -e .
 python scripts/check_release.py
+python -m unittest discover -s tests -v
+python scripts/run_final_rf.py --help
 python scripts/run_final_rf.py --data-root /path/to/chb-mit --rebuild-cache
 ```
 
-The command writes a new patient-summary CSV under `outputs/` and does not modify the reference notebooks or reported result files. A clean Python 3.11 environment has been used to verify editable installation, package import, CLI startup, and the final RF configuration interface.
+The last command requires the EDFs and annotations and performs the full experiment. It reads `configs/final_rf.json` and writes `outputs/reproduced_patient_summary.csv`. `--patients chb01` runs a single subject; `--config path/to/config.json` selects another configuration. Omit `--rebuild-cache` to reuse compatible caches. Rebuilding overwrites those caches. Missing annotations, channels, recordings or requested patient caches raise an error rather than silently reducing the cohort.
 
-## Scientific boundaries
+Optional model-family comparison support: `python -m pip install -e ".[benchmark]"` installs XGBoost. Random Forest reproduction does not require it.
 
-- Evaluation is **patient-specific and within-subject**; this repository does not claim zero-shot performance on unseen patients.
-- Filtering and centred probability smoothing in the canonical study are offline/non-causal and require causal replacements for streaming use.
-- Python latency is a software benchmark, not a measurement on a target MCU/DSP.
-- The study is retrospective and academic; it does not establish clinical safety, diagnostic reliability, or medical-device readiness.
-- Study-level iteration on the same 10-patient cohort can introduce selection optimism even when the inner/outer fold mechanics avoid direct test-fold leakage.
-- Raw predictions and the original EDF data are not included here, so exact historical numerical reruns require the source dataset and the documented pipeline.
+## Results and outputs
 
-## Future work
+- [Headline metrics](results/headline_metrics.csv), [subject metrics](results/patient_metrics.csv) and [feature-reduction comparison](results/feature_reduction_comparison.csv).
+- [Classical-model benchmark](results/model_benchmark.csv) and [comparison figure](assets/final_multi_model_comparison.png): preliminary model-family comparison, with different RF settings from the final result. The figure labels median subject FAR as "Macro FAR".
+- [Representative feature importance](assets/feature_importance_top20_chb01.png): one patient's ranking, not a universal feature set.
+- [Error analysis](results/error_analysis/README.md): delayed detections, false alarms, accepted proxy augmentation and rejected refinements.
+- [Academic report](docs/EE6019_Final_Report_PUBLIC_REDACTED.pdf): detailed methods, study results and deployment measurements. Its bibliography and future-work discussion provide broader research context.
 
-The highest-value next steps are methodological rather than cosmetic: replace non-causal preprocessing with a streaming-safe pipeline, evaluate strict leave-one-patient-out generalisation, benchmark feature-computation cost separately from classifier latency, and test compact models on representative embedded hardware.
+The report profiles a representative 30-input, 500-tree model at approximately 2.99 MiB serialized size and 80.99 ms mean Python inference latency (Table 9). These are classifier-only software measurements, excluding EEG preprocessing and feature extraction; they are not target-hardware measurements. A compact C-export comparison reduced size from about 3,642.3 KB to 719.2 KB, with lower sensitivity (0.955 to 0.930) and higher FAR (0.2617/h to 0.4234/h).
 
-A separate deep-learning/domain-generalisation rebuild exists as exploratory follow-up work, but it is intentionally excluded from this repository because it did not contribute validated real-data results to the reported EE6019 project.
+## Limitations
 
-## Provenance and reproducibility
+- Zero-phase filtering, centred smoothing and retrospective duration filtering are noncausal. Reported delays use epoch starts and exclude acquisition/confirmation latency.
+- Binary epoch labels quantize onset and can merge nearby annotated events; results depend on that event definition.
+- Repeated configuration selection on the same cohort can produce optimistic estimates despite training/validation separation within folds.
+- The error-analysis study covers 54 events over 564.56 h and must be compared against its own baseline. Its case-derived refinements need independent validation.
+- Raw EEG, prediction traces and fitted models are not distributed. Installation and synthetic tests validate software behaviour, not full-data reproduction of the saved results. The cause of the study/error-analysis coverage difference cannot be fully resolved without those inputs.
 
-The reported results are anchored to the final report, the reference notebooks, and the exported result tables included in this repository. The maintained Python implementation under `src/eeg_seizure_detection/` reorganises the study logic into responsibility-specific modules for easier inspection and reuse.
+## Dataset, license and citation
 
-`scripts/check_release.py` provides lightweight structural QA for the public repository, including syntax, dependency, link, notebook, and claim-boundary checks. A privacy-redacted copy of the final academic report is available at [`docs/EE6019_Final_Report_PUBLIC_REDACTED.pdf`](docs/EE6019_Final_Report_PUBLIC_REDACTED.pdf). See [`docs/PROJECT_AUDIT.md`](docs/PROJECT_AUDIT.md) for evidence precedence and claim boundaries.
+CHB-MIT data are distributed separately by [PhysioNet](https://physionet.org/content/chbmit/1.0.0/). Source code is under the [MIT License](LICENSE); dataset and third-party material retain their own terms, as described in [NOTICE.md](NOTICE.md). Cite the software using [CITATION.cff](CITATION.cff).
 
-## License and data
-
-Source code and release tooling authored for this repository are provided under the MIT License. Third-party datasets, reproduced literature material, and externally owned content retain their original rights and terms. Raw CHB-MIT recordings are not redistributed; see [`data/README.md`](data/README.md).
+Yangdeyi Yang · UCC EE6019 Research Project

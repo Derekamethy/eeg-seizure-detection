@@ -1,8 +1,11 @@
 metric,value,aggregation,scope
-macro_event_sensitivity,0.98,macro across subjects,canonical final report
-median_subject_far_per_hour,0.2455,median across subjects,canonical final report
-mean_detected_event_delay_s,10.64,reported mean for detected events,canonical final report
-pooled_detected_events,53,count across cohort,canonical final report
-pooled_total_events,55,count across cohort,canonical final report
-pooled_false_alarm_events,178,count across cohort,canonical final report
-pooled_far_per_hour,0.3066,178 alarms / 580.57 hours,canonical final report
+macro_event_sensitivity,0.98,macro across subjects,reported final study
+median_subject_far_per_hour,0.2455,median across subjects,reported final study
+macro_mean_detected_event_delay_s,10.64,mean of subject-level mean detected-event delays,reported final study
+pooled_detected_events,53,count across cohort,reported final study
+pooled_total_events,55,count across cohort,reported final study
+pooled_false_alarm_events,178,count across cohort,reported final study
+pooled_far_per_hour,0.3066,178 alarms / 580.57 hours,reported final study
+pooled_mean_detected_event_delay_s,9.09,mean across all detected events,reported final study
+patients,10,count,reported final study
+eeg_hours,580.57,sum across subjects,reported final study

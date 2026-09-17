@@ -1,5 +1,0 @@
-﻿CaseType,Patient,File,ImagePath,Delay_s,PeakProb,Duration_s
-chb04_delay,chb04,chb04_28.edf,<LOCAL_EXPORT_PATH>,104.0,,
-chb04_delay,chb04,chb04_28.edf,<LOCAL_EXPORT_PATH>,20.0,,
-chb08_fp,chb08,chb08_15.edf,<LOCAL_EXPORT_PATH>,,0.8513685356692,26.0
-chb08_fp,chb08,chb08_11.edf,<LOCAL_EXPORT_PATH>,,0.7429548410290968,12.0

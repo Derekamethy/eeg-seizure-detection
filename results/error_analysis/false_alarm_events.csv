@@ -1,4 +1,4 @@
-﻿patient_id,file_name,pred_event_id,pred_start_epoch,pred_end_epoch,onset_time_s,offset_time_s,duration_s,peak_prob,matched_true_event_ids,event_role
+patient_id,file_name,pred_event_id,pred_start_epoch,pred_end_epoch,onset_time_s,offset_time_s,duration_s,peak_prob,matched_true_event_ids,event_role
 chb08,chb08_15.edf,chb08|chb08_15.edf|P08,568,581,1136.0,1162.0,26.0,0.8513685356692,[],FP
 chb08,chb08_11.edf,chb08|chb08_11.edf|P02,1570,1576,3140.0,3152.0,12.0,0.7429548410290968,[],FP
 chb08,chb08_15.edf,chb08|chb08_15.edf|P01,49,53,98.0,106.0,8.0,0.7350245904036509,[],FP

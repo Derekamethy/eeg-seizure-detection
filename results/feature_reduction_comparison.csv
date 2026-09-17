@@ -1,3 +1,3 @@
-variant,detected_events,total_events,false_alarm_events,pooled_sensitivity,pooled_far_per_hour,mean_delay_s,source
+variant,detected_events,total_events,false_alarm_events,pooled_sensitivity,pooled_far_per_hour,pooled_mean_detected_event_delay_s,source
 RF full features,52,55,183,0.9455,0.3152,6.69,final report Table 6
 RF top-30,53,55,178,0.9636,0.3066,9.09,final report Table 6

@@ -1,7 +1,0 @@
-﻿Check,LegacyBaseline,LegacyClinical,Match,Interpretation
-CACHE_SCHEMA_VERSION,v2_summary_parser_fix,v2_summary_parser_fix,True,Same schema assignment argues against a parser-schema mismatch.
-parse_summary_to_dict,present,present,True,Summary parser alignment
-build_patient_cache,present,present,True,Cache construction alignment
-sample_rows_from_matrix_index,missing,present,False,Training row sampling helper alignment
-collect_rows_from_matrix_index,present,present,True,Evaluation row collection helper alignment
-evaluate_patient_loso,present,present,False,Fold evaluation logic alignment

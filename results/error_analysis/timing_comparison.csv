@@ -1,4 +1,4 @@
-﻿Variant,Patient,Patients,Sensitivity,FAR_per_Hour,Mean_Delay_s,Median_Delay_s,FP_events,UsesProxyFeatures,ProxyRecipe,ProxyFeatureCount,ThresholdPolicy,MinDurationEpochs
+Variant,Patient,Patients,Macro_Sensitivity,Median_Subject_FAR_per_Hour,Macro_Mean_Delay_s,Median_Delay_s,FP_events,UsesProxyFeatures,ProxyRecipe,ProxyFeatureCount,ThresholdPolicy,MinDurationEpochs
 baseline_rf_top30,MACRO,10,0.9777777777777779,0.39074760718812335,9.955238095238096,5.0,233,False,baseline,0,baseline_far_first,3
 proxy_hybrid_plus_count_rf,MACRO,10,0.9666666666666666,0.2809518484430014,11.074761904761903,5.0,182,True,hybrid_plus_amp_count,4,far_first,3
 proxy_hybrid_plus_count_delayfirst_rf,MACRO,10,0.9666666666666666,1.1897084457338138,5.868571428571428,2.0,889,True,hybrid_plus_amp_count,4,delay_first,3

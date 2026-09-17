@@ -83,6 +83,8 @@ def temporal_stack_features(X_base: np.ndarray, y: np.ndarray, history_epochs: i
     """Pre-allocate output matrix instead of vstack + hstack (optimization #4)."""
     if X_base.shape[0] != len(y):
         raise ValueError('X_base and y length mismatch.')
+    if history_epochs < 0:
+        raise ValueError('history_epochs must be nonnegative.')
     n_epochs, base_dim = X_base.shape
     total_dim = base_dim * (history_epochs + 1)
     X_stacked = np.zeros((n_epochs, total_dim), dtype=np.float32)
@@ -96,14 +98,8 @@ def temporal_stack_features(X_base: np.ndarray, y: np.ndarray, history_epochs: i
         col += base_dim
     return (X_stacked, y.copy())
 
-_BASE_FEATURE_NAMES_CACHE: Dict[int, List[str]] = {}
 
 def build_base_feature_names(cfg: ExperimentConfig) -> List[str]:
-    """Cached: result depends only on cfg (optimization #9)."""
-    obj_id = id(cfg)
-    cached = _BASE_FEATURE_NAMES_CACHE.get(obj_id)
-    if cached is not None:
-        return cached
     names = []
     bands = get_band_tuples(cfg)
     for ch in cfg.channels:
@@ -111,17 +107,10 @@ def build_base_feature_names(cfg: ExperimentConfig) -> List[str]:
             names.append(f'{ch} [{band_name}]')
     for idx_a, idx_b in get_synchrony_index_pairs(cfg):
         names.append(f'Sync: {cfg.channels[idx_a]} & {cfg.channels[idx_b]}')
-    _BASE_FEATURE_NAMES_CACHE[obj_id] = names
     return names
 
-_STACKED_FEATURE_NAMES_CACHE: Dict[int, List[str]] = {}
 
 def build_stacked_feature_names(cfg: ExperimentConfig) -> List[str]:
-    """Cached: result depends only on cfg (optimization #9)."""
-    obj_id = id(cfg)
-    cached = _STACKED_FEATURE_NAMES_CACHE.get(obj_id)
-    if cached is not None:
-        return cached
     base_names = build_base_feature_names(cfg)
     names = []
     history = cfg.feature.history_epochs
@@ -130,5 +119,4 @@ def build_stacked_feature_names(cfg: ExperimentConfig) -> List[str]:
             names.append(f'{name} @ t-{lag}')
     for name in base_names:
         names.append(f'{name} @ t')
-    _STACKED_FEATURE_NAMES_CACHE[obj_id] = names
     return names

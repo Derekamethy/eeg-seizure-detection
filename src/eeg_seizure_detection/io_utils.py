@@ -30,20 +30,12 @@ def make_json_safe(obj: Any) -> Any:
         return {str(k): make_json_safe(v) for k, v in obj.items()}
     return obj
 
-_CONFIG_HASH_CACHE: Dict[int, str] = {}
-
 def config_to_hash(cfg: ExperimentConfig) -> str:
-    """Cached: avoids re-serializing config on every call (optimization #8)."""
-    obj_id = id(cfg)
-    cached = _CONFIG_HASH_CACHE.get(obj_id)
-    if cached is not None:
-        return cached
+    """Hash current values so mutable configurations cannot reuse stale caches."""
     cfg_dict = make_json_safe(asdict(cfg))
-    hash_payload = {'cache_schema_version': CACHE_SCHEMA_VERSION, 'config': cfg_dict}
-    cfg_str = json.dumps(hash_payload, sort_keys=True, ensure_ascii=False)
-    result = joblib.hash(cfg_str)
-    _CONFIG_HASH_CACHE[obj_id] = result
-    return result
+    payload = {"cache_schema_version": CACHE_SCHEMA_VERSION, "config": cfg_dict}
+    return joblib.hash(json.dumps(payload, sort_keys=True, ensure_ascii=False))
+
 
 def save_json(data: Dict[str, Any], path: Path) -> None:
     ensure_dir(path.parent)
